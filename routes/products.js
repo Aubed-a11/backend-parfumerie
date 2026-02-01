@@ -1,37 +1,26 @@
-const router = require("express").Router();
-const Product = require("../models/Product");
-const upload = require("../cloudinary");
-const mongoose = require("mongoose");
-// GET
-router.get("/", async (_, res) => {
-  res.json(await Product.find());
+const express = require("express");
+const router = express.Router();
+const Product = require("../models/Product"); // ✅ SEULE SOURCE
+
+// GET tous les produits
+router.get("/", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
-// POST avec image
-router.post("/", upload.single("image"), async (req, res) => {
-  const product = await Product.create({
-    name: req.body.name,
-    price: req.body.price,
-    category: req.body.category,
-    image: req.file?.path
-  });
-
-  req.app.get("io").emit("updateProducts");
-  res.json(product);
-});
-
-// DELETE
-router.delete("/:id", async (req, res) => {
-  await Product.findByIdAndDelete(req.params.id);
-  req.app.get("io").emit("updateProducts");
-  res.sendStatus(200);
+// POST ajouter un produit
+router.post("/", async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).json(product);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 });
 
 module.exports = router;
-module.exports = mongoose.model("Product", new mongoose.Schema({
-  name: String,
-  price: Number,
-  category: String,
-  image: String,
-  createdAt: { type: Date, default: Date.now }
-}));
