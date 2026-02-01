@@ -1,71 +1,37 @@
-const express = require("express");
-const router = express.Router();
+const router = require("express").Router();
 const Product = require("../models/Product");
-const multer = require("multer");
-const auth = require("../middleware/auth");
-/* ================= GET : tous les produits ================= */
-router.get("/", async (req, res) => {
-  try {
-    const { category } = req.query;
-
-    const filter = category ? { category } : {};
-    const products = await Product.find(filter);
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: "Erreur serveur" });
-  }
+const upload = require("../cloudinary");
+const mongoose = require("mongoose");
+// GET
+router.get("/", async (_, res) => {
+  res.json(await Product.find());
 });
 
-/* ================= POST : ajouter un produit ================= */
-router.post("/", async (req, res) => {
-  try {
-    const { name, description, category, price, stock, image } = req.body;
+// POST avec image
+router.post("/", upload.single("image"), async (req, res) => {
+  const product = await Product.create({
+    name: req.body.name,
+    price: req.body.price,
+    category: req.body.category,
+    image: req.file?.path
+  });
 
-    if (!name || !price) {
-      return res.status(400).json({ message: "Nom et prix obligatoires" });
-    }
-
-    const newProduct = new Product({
-      name,
-      description,
-      category,
-      price,
-      stock,
-      image
-    });
-
-    await newProduct.save();
-
-    res.status(201).json({
-      message: "Produit ajouté avec succès",
-      product: newProduct
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Erreur lors de l'ajout du produit" });
-  }
+  req.app.get("io").emit("updateProducts");
+  res.json(product);
 });
 
-router.put("/:id", async (req, res) => {
-  const updated = await Product.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  );
-  res.json(updated);
-});
+// DELETE
 router.delete("/:id", async (req, res) => {
   await Product.findByIdAndDelete(req.params.id);
-  res.json({ message: "Produit supprimé" });
+  req.app.get("io").emit("updateProducts");
+  res.sendStatus(200);
 });
-app.use("/uploads", express.static("uploads"));
 
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage });
 module.exports = router;
+module.exports = mongoose.model("Product", new mongoose.Schema({
+  name: String,
+  price: Number,
+  category: String,
+  image: String,
+  createdAt: { type: Date, default: Date.now }
+}));
