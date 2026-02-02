@@ -23,6 +23,7 @@ mongoose
 app.use("/api/products", require("./routes/products"));
 app.use("/api/orders", require("./routes/orders"));
 app.use("/api/payment", paymentRoutes);
+app.use("/uploads", express.static("uploads"));
 
 
 io.on("connection", socket => {
