@@ -1,13 +1,21 @@
+// models/Order.js
 const mongoose = require("mongoose");
 
-module.exports = mongoose.model("Order", new mongoose.Schema({
-  customer: String,
-  products: Array,
+const orderSchema = new mongoose.Schema({
+  sessionId: String,
+  items: [
+    {
+      productId: String,
+      name: String,
+      price: Number,
+      quantity: Number,
+      image: String
+    }
+  ],
   total: Number,
-  status: {
-    type: String,
-    enum: ["Pending", "In Progress", "Delivered", "Cancelled"],
-    default: "Pending"
-  },
+  paymentRef: String,
+  status: { type: String, default: "Pending" },
   createdAt: { type: Date, default: Date.now }
-}));
+});
+
+module.exports = mongoose.model("Order", orderSchema);
